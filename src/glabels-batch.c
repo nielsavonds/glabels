@@ -39,6 +39,7 @@
 /* Private globals                            */
 /*============================================*/
 static gchar    *output          = "output.pdf";
+static gchar    *printer         = NULL;
 static gint     n_copies         = 1;
 static gint     n_sheets         = 1;
 static gint     first            = 1;
@@ -51,6 +52,8 @@ static gchar    **remaining_args = NULL;
 static GOptionEntry option_entries[] = {
         {"output", 'o', 0, G_OPTION_ARG_STRING, &output,
          N_("set output filename (default=\"output.pdf\")"), N_("filename")},
+        {"printer", 'p', 0, G_OPTION_ARG_STRING, &printer,
+         N_("set output printer, overrides filename"), N_("printer")},
         {"sheets", 's', 0, G_OPTION_ARG_INT, &n_sheets,
          N_("number of sheets (default=1)"), N_("sheets")},
         {"copies", 'c', 0, G_OPTION_ARG_INT, &n_copies,
@@ -157,7 +160,20 @@ main (int argc, char **argv)
                         frame = (lglTemplateFrame *)template->frames->data;
 
                         print_op = gl_print_op_new (label);
-                        gl_print_op_set_filename        (print_op, abs_fn);
+
+                        GtkPrintOperationAction action;
+                        if (printer == NULL)
+                        {
+                                gl_print_op_set_filename(print_op, abs_fn);
+                                action = GTK_PRINT_OPERATION_ACTION_EXPORT;
+                        }
+                        else
+                        {
+                                GtkPrintSettings *print_settings = gtk_print_settings_new();
+                                gtk_print_settings_set_printer(print_settings, printer);
+                                gtk_print_operation_set_print_settings(GTK_PRINT_OPERATION (print_op), print_settings);
+                                action = GTK_PRINT_OPERATION_ACTION_PRINT;
+                        }
                         gl_print_op_set_n_copies        (print_op, n_copies);
                         gl_print_op_set_first           (print_op, first);
                         gl_print_op_set_outline_flag    (print_op, outline_flag);
@@ -176,7 +192,7 @@ main (int argc, char **argv)
                                                           lgl_template_frame_get_n_labels (frame));
                         }
                         gtk_print_operation_run (GTK_PRINT_OPERATION (print_op),
-                                                 GTK_PRINT_OPERATION_ACTION_EXPORT,
+                                                 action,
                                                  NULL,
                                                  NULL);
 
